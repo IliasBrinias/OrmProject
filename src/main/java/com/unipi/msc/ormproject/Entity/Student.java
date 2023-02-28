@@ -5,7 +5,7 @@ import com.unipi.msc.ormproject.ORM.Enum.ColumnType;
 import com.unipi.msc.ormproject.ORM.Enum.DatabaseType;
 
 import java.util.List;
-@Database(name="UnipiDB", dbType = DatabaseType.SQLITE)
+@Database(name="UnipiDERBY", dbType = DatabaseType.DERBY)
 @Table(name="Student")
 public class Student {
     @PrimaryKey
@@ -13,7 +13,7 @@ public class Student {
     String AM;
     @Column(name="Email",type=ColumnType.TEXT)
     String email;
-    @Column(name="Year",type=ColumnType.INTEGER)
+    @Column(name="yearOfStudies",type=ColumnType.INTEGER)
     int yearOfStudies;
     @Column(name="FullName",type=ColumnType.TEXT)
     String fullName;

@@ -1,5 +1,9 @@
 package com.unipi.msc.ormproject.ORM.Database;
 
+import com.unipi.msc.ormproject.ORM.Enum.ColumnType;
+import com.unipi.msc.ormproject.ORM.Interface.IDatabase;
+import org.sqlite.SQLiteConfig;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -7,21 +11,18 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.unipi.msc.ormproject.ORM.Interface.Db;
-import org.sqlite.SQLiteConfig;
-public class SQLiteDB implements Db {
-    private static final String DATABASE_URL = "jdbc:sqlite:"+System.getProperty("user.dir")+"/";
+public class H2Database implements IDatabase {
+    private static final String DATABASE_URL = "jdbc:h2:"+System.getProperty("user.dir")+"/";
+    public static final String DRIVER = "org.h2.JDBC";
     private final String DBName;
-    public static final String DRIVER = "org.sqlite.JDBC";
-    private String table = null;
+    private String table;
     private List<String> fields = new ArrayList<>();
 
-    public SQLiteDB(String dbName) {
+    public H2Database(String dbName) {
         this.DBName = dbName;
     }
-
     private Connection getConnection() throws ClassNotFoundException {
-        Class.forName(DRIVER);
+//        Class.forName(DRIVER);
         Connection connection = null;
         try {
             SQLiteConfig config = new SQLiteConfig();
@@ -30,7 +31,9 @@ public class SQLiteDB implements Db {
         } catch (SQLException ignore) {}
         return connection;
     }
-    public void runQuery(){
+
+    @Override
+    public void runQuery() {
         StringBuilder stringBuilderCreate = new StringBuilder();
         stringBuilderCreate.append("CREATE TABLE IF NOT EXISTS ").append(table).append(" (");
         stringBuilderCreate.append(" {FIELDS} ");
@@ -53,15 +56,26 @@ public class SQLiteDB implements Db {
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+
     }
 
     @Override
     public void appendField(String line) {
-        fields.add(line);
+        this.fields.add(line);
     }
 
     @Override
     public void setTable(String table) {
         this.table = table;
+    }
+
+    @Override
+    public String getDatabaseDataType(ColumnType columnType) {
+        switch (columnType){
+            case INTEGER -> {return "INT";}
+            case TEXT -> {return "VARCHAR(255)";}
+            case BOOLEAN -> {return "BOOLEAN";}
+        }
+        return null;
     }
 }

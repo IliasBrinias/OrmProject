@@ -4,9 +4,11 @@ import com.unipi.msc.ormproject.ORM.Anotations.Column;
 import com.unipi.msc.ormproject.ORM.Anotations.Database;
 import com.unipi.msc.ormproject.ORM.Anotations.PrimaryKey;
 import com.unipi.msc.ormproject.ORM.Anotations.Table;
-import com.unipi.msc.ormproject.ORM.Database.SQLiteDB;
+import com.unipi.msc.ormproject.ORM.Database.DerbyDatabase;
+import com.unipi.msc.ormproject.ORM.Database.H2Database;
+import com.unipi.msc.ormproject.ORM.Database.SQLiteIDatabase;
 import com.unipi.msc.ormproject.ORM.Enum.ColumnType;
-import com.unipi.msc.ormproject.ORM.Interface.Db;
+import com.unipi.msc.ormproject.ORM.Interface.IDatabase;
 import com.unipi.msc.ormproject.ORM.Tool.LoadClasses;
 
 import java.lang.annotation.Annotation;
@@ -15,15 +17,15 @@ import java.lang.reflect.Field;
 public class OrmInitializer {
     public static void init(){
         LoadClasses.findAllClassesUsingClassLoader().forEach(c->{
-            Db database = classAnnotation(c.getAnnotations());
+            IDatabase database = classAnnotation(c.getAnnotations());
             if (database == null) return;
             for (Field f: c.getDeclaredFields()){
-                database.appendField(fieldAnnotation(f.getAnnotations()));
+                fieldAnnotation(database,f.getAnnotations());
             }
             database.runQuery();
         });
     }
-    private static String fieldAnnotation(Annotation[] annotations) {
+    private static void fieldAnnotation(IDatabase database,Annotation[] annotations) {
         Column column = null;
         PrimaryKey primaryKey = null;
         for (Annotation a:annotations) {
@@ -33,23 +35,22 @@ public class OrmInitializer {
                 primaryKey = (PrimaryKey) a;
             }
         }
-        if (column == null) return null;
+        if (column == null) return;
         StringBuilder stringBuilderColumn = new StringBuilder();
-        stringBuilderColumn.append(column.name());
-        stringBuilderColumn.append(" ");
-        stringBuilderColumn.append(column.type());
+        stringBuilderColumn.append(column.name().toLowerCase())
+                .append(" ")
+                .append(database.getDatabaseDataType(column.type()));
         if (primaryKey!=null){
-            stringBuilderColumn.append(" ");
-            stringBuilderColumn.append("PRIMARY KEY");
+            stringBuilderColumn.append(" ").append("PRIMARY KEY");
             if (column.type() == ColumnType.INTEGER){
-                stringBuilderColumn.append(" AUTOINCREMENT");
+                stringBuilderColumn.append(" ").append("AUTOINCREMENT");
             }
         }
-        return stringBuilderColumn.toString();
+        database.appendField(stringBuilderColumn.toString());
     }
 
-    private static Db classAnnotation(Annotation[] annotations){
-        Db db = null;
+    private static IDatabase classAnnotation(Annotation[] annotations){
+        IDatabase IDatabase = null;
         Database database = null;
         Table table = null;
         for (Annotation a:annotations) {
@@ -62,13 +63,13 @@ public class OrmInitializer {
         }
         if (database == null || table == null) return null;
         switch (database.dbType()){
-            case DERBY -> {}
-            case SQLITE -> db = new SQLiteDB(database.name());
-            case H2 -> {}
+            case DERBY  -> IDatabase = new DerbyDatabase(database.name());
+            case SQLITE -> IDatabase = new SQLiteIDatabase(database.name());
+            case H2     -> IDatabase = new H2Database(database.name());
         }
 
-        if (db == null) return db;
-        db.setTable(table.name());
-        return db;
+        if (IDatabase == null) return IDatabase;
+        IDatabase.setTable(table.name());
+        return IDatabase;
     }
 }
