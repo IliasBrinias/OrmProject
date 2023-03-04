@@ -2,73 +2,52 @@ package com.unipi.msc.ormproject.ORM.Database;
 
 import com.unipi.msc.ormproject.ORM.Enum.ColumnType;
 import com.unipi.msc.ormproject.ORM.Interface.IDatabase;
-import org.sqlite.SQLiteConfig;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class H2Database implements IDatabase {
-    private static final String DATABASE_URL = "jdbc:h2:"+System.getProperty("user.dir")+"/";
-    public static final String DRIVER = "org.h2.JDBC";
-    private final String DBName;
+public class H2Database extends Database implements IDatabase {
     private String table;
-    private List<String> fields = new ArrayList<>();
-
     public H2Database(String dbName) {
-        this.DBName = dbName;
+        super("jdbc:h2:"+System.getProperty("user.dir")+"/", dbName);
     }
+
     private Connection getConnection() throws ClassNotFoundException {
-//        Class.forName(DRIVER);
         Connection connection = null;
         try {
-            SQLiteConfig config = new SQLiteConfig();
-            config.enforceForeignKeys(true);
-            connection = DriverManager.getConnection(DATABASE_URL+DBName,config.toProperties());
-        } catch (SQLException ignore) {}
+            connection = DriverManager.getConnection(getDatabaseUrl()+getDbName());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return connection;
     }
-
     @Override
-    public void runQuery() {
+    public void createTable() {
         StringBuilder stringBuilderCreate = new StringBuilder();
-        stringBuilderCreate.append("CREATE TABLE IF NOT EXISTS ").append(table).append(" (");
-        stringBuilderCreate.append(" {FIELDS} ");
-        stringBuilderCreate.append(");");
-
-        StringBuilder stringBuilderFields = new StringBuilder();
-        String lastItem = fields.get(fields.size()-1);
-        fields.forEach(f->{
-            if (f == null) return;
-            stringBuilderFields.append(f);
-            if (lastItem.equals(f)) return;
-            stringBuilderFields.append(",");
-        });
-        String table_query = stringBuilderCreate.toString().replace("{FIELDS}",stringBuilderFields.toString());
+        stringBuilderCreate.append("CREATE TABLE IF NOT EXISTS ")
+                .append(table)
+                .append(" ( ")
+                .append(getFormattedFields())
+                .append(" );");
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
-            stmt.execute(table_query);
+            stmt.execute(stringBuilderCreate.toString());
             conn.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-
     }
 
     @Override
     public void appendField(String line) {
-        this.fields.add(line);
+        getFields().add(line);
     }
-
     @Override
     public void setTable(String table) {
         this.table = table;
     }
-
     @Override
     public String getDatabaseDataType(ColumnType columnType) {
         switch (columnType){
@@ -78,4 +57,63 @@ public class H2Database implements IDatabase {
         }
         return null;
     }
+    @Override
+    public List<Object> selectQuery(Class c) {
+        List<Object> classData = new ArrayList<>();
+        String query = "SELECT * FROM "+table;
+        try {
+            Connection conn = getConnection();
+            PreparedStatement statement = conn.prepareStatement(query);
+            ResultSet rs = statement.executeQuery();
+            while(rs.next()){
+                classData.add(setObjectFields(c,rs));
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+        return classData;
+    }
+
+    @Override
+    public Object selectQuery(Class c, String whereCause) {
+        Object o = null;
+        StringBuilder stringBuilderQuery = new StringBuilder();
+        stringBuilderQuery.append("SELECT * FROM ")
+                .append(table)
+                .append(" WHERE ")
+                .append(whereCause);
+        try {
+            Connection conn = getConnection();
+            PreparedStatement statement = conn.prepareStatement(stringBuilderQuery.toString());
+            ResultSet rs = statement.executeQuery();
+            while(rs.next()){
+                o = setObjectFields(c,rs);
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+        return o;
+    }
+
+    @Override
+    public int deleteQuery(Class c, String whereCause) {
+        StringBuilder stringBuilderQuery = new StringBuilder();
+        stringBuilderQuery.append("DELETE FROM ")
+                .append(table)
+                .append(" WHERE ")
+                .append(whereCause);
+        try {
+            Connection conn = getConnection();
+            PreparedStatement statement = conn.prepareStatement(stringBuilderQuery.toString());
+            return statement.executeUpdate();
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
 }

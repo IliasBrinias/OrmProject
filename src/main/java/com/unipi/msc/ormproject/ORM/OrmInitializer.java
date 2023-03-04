@@ -17,15 +17,16 @@ import java.lang.reflect.Field;
 public class OrmInitializer {
     public static void init(){
         LoadClasses.findAllClassesUsingClassLoader().forEach(c->{
-            IDatabase database = classAnnotation(c.getAnnotations());
-            if (database == null) return;
+            IDatabase database = getDatabase(c.getAnnotations());
+            if (database == null || c.getDeclaredFields().length == 0) return;
             for (Field f: c.getDeclaredFields()){
-                fieldAnnotation(database,f.getAnnotations());
+                addFields(database,f.getAnnotations());
             }
-            database.runQuery();
+            database.createTable();
         });
     }
-    private static void fieldAnnotation(IDatabase database,Annotation[] annotations) {
+    private static void addFields(IDatabase database, Annotation[] annotations) {
+        StringBuilder stringBuilderColumn = new StringBuilder();
         Column column = null;
         PrimaryKey primaryKey = null;
         for (Annotation a:annotations) {
@@ -36,40 +37,45 @@ public class OrmInitializer {
             }
         }
         if (column == null) return;
-        StringBuilder stringBuilderColumn = new StringBuilder();
+
         stringBuilderColumn.append(column.name().toLowerCase())
                 .append(" ")
                 .append(database.getDatabaseDataType(column.type()));
+        if (column.notNull()){
+            stringBuilderColumn.append(" NOT NULL ");
+        }
+
         if (primaryKey!=null){
             stringBuilderColumn.append(" ").append("PRIMARY KEY");
             if (column.type() == ColumnType.INTEGER){
                 stringBuilderColumn.append(" ").append("AUTOINCREMENT");
             }
+        }else if (column.unique()){
+            stringBuilderColumn.append(" UNIQUE ");
         }
         database.appendField(stringBuilderColumn.toString());
     }
 
-    private static IDatabase classAnnotation(Annotation[] annotations){
-        IDatabase IDatabase = null;
-        Database database = null;
+    public static IDatabase getDatabase(Annotation[] annotations){
+        IDatabase db = null;
+        Database aDb = null;
         Table table = null;
         for (Annotation a:annotations) {
             if (a instanceof Database){
-                database = (Database) a;
+                aDb = (Database) a;
 
             }else if (a instanceof Table){
                 table = (Table) a;
             }
         }
-        if (database == null || table == null) return null;
-        switch (database.dbType()){
-            case DERBY  -> IDatabase = new DerbyDatabase(database.name());
-            case SQLITE -> IDatabase = new SQLiteIDatabase(database.name());
-            case H2     -> IDatabase = new H2Database(database.name());
+        if (aDb == null || table == null) return null;
+        switch (aDb.dbType()){
+            case DERBY  -> db = new DerbyDatabase(aDb.name());
+            case SQLITE -> db = new SQLiteIDatabase(aDb.name());
+            case H2     -> db = new H2Database(aDb.name());
         }
-
-        if (IDatabase == null) return IDatabase;
-        IDatabase.setTable(table.name());
-        return IDatabase;
+        if (db == null) return db;
+        db.setTable(table.name());
+        return db;
     }
 }

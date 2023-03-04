@@ -12,4 +12,6 @@ import java.lang.annotation.Target;
 public @interface Column {
     String name();
     ColumnType type();
+    boolean notNull() default false;
+    boolean unique() default false;
 }
