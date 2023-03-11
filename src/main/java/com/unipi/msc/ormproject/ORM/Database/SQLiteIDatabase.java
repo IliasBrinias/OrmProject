@@ -24,7 +24,7 @@ public class SQLiteIDatabase extends Database implements IDatabase {
         }
         return connection;
     }
-    public void createTable(){
+    public int createTable(){
         StringBuilder stringBuilderCreate = new StringBuilder();
         stringBuilderCreate.append("CREATE TABLE IF NOT EXISTS ")
                 .append(table)
@@ -32,13 +32,11 @@ public class SQLiteIDatabase extends Database implements IDatabase {
                 .append(getFormattedFields())
                 .append(" );");
         try {
-            Connection conn = getConnection();
-            Statement stmt = conn.createStatement();
-            stmt.execute(stringBuilderCreate.toString());
-            conn.close();
-        } catch (SQLException | ClassNotFoundException e) {
+            return runUpdateStatement(getConnection(),stringBuilderCreate.toString());
+        } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
         }
+        return -1;
     }
     @Override
     public void appendField(String line) {
@@ -62,16 +60,9 @@ public class SQLiteIDatabase extends Database implements IDatabase {
         List<Object> classData = new ArrayList<>();
         String query = "SELECT * FROM "+table;
         try {
-            Connection conn = getConnection();
-            PreparedStatement statement = conn.prepareStatement(query);
-            ResultSet rs = statement.executeQuery();
-            while(rs.next()){
-                classData.add(setObjectFields(c,rs));
-            }
-        } catch (SQLException | ClassNotFoundException e) {
+            classData = getQueryResultToList(c,getConnection(),query);
+        } catch (SQLException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
         }
         return classData;
     }
@@ -85,16 +76,9 @@ public class SQLiteIDatabase extends Database implements IDatabase {
                 .append(" WHERE ")
                 .append(whereCause);
         try {
-            Connection conn = getConnection();
-            PreparedStatement statement = conn.prepareStatement(stringBuilderQuery.toString());
-            ResultSet rs = statement.executeQuery();
-            while(rs.next()){
-                o = setObjectFields(c,rs);
-            }
-        } catch (SQLException | ClassNotFoundException e) {
+            o = getQueryResultToObject(c,getConnection(),stringBuilderQuery.toString());
+        } catch (SQLException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
         }
         return o;
     }
@@ -107,10 +91,17 @@ public class SQLiteIDatabase extends Database implements IDatabase {
                 .append(" WHERE ")
                 .append(whereCause);
         try {
-            Connection conn = getConnection();
-            PreparedStatement statement = conn.prepareStatement(stringBuilderQuery.toString());
-            return statement.executeUpdate();
-        } catch (SQLException | ClassNotFoundException e) {
+            return runUpdateStatement(getConnection(),stringBuilderQuery.toString());
+        } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+    @Override
+    public int save(Object o) {
+        try{
+            return runUpdateStatement(getConnection(),getInsertQuery(table,o));
+        } catch (ClassNotFoundException | IllegalAccessException | SQLException e) {
             e.printStackTrace();
         }
         return -1;

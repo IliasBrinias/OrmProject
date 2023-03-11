@@ -10,12 +10,19 @@ import com.unipi.msc.ormproject.ORM.Database.SQLiteIDatabase;
 import com.unipi.msc.ormproject.ORM.Enum.ColumnType;
 import com.unipi.msc.ormproject.ORM.Interface.IDatabase;
 import com.unipi.msc.ormproject.ORM.Tool.LoadClasses;
+import org.apache.commons.io.FileUtils;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 public class OrmInitializer {
     public static void init(){
+        LoadClasses.dropDatabases();
         LoadClasses.findAllClassesUsingClassLoader().forEach(c->{
             IDatabase database = getDatabase(c.getAnnotations());
             if (database == null || c.getDeclaredFields().length == 0) return;
@@ -25,6 +32,12 @@ public class OrmInitializer {
             database.createTable();
         });
     }
+
+    /**
+     * add field definition for the table creation
+     * @param database
+     * @param annotations
+     */
     private static void addFields(IDatabase database, Annotation[] annotations) {
         StringBuilder stringBuilderColumn = new StringBuilder();
         Column column = null;
@@ -37,14 +50,12 @@ public class OrmInitializer {
             }
         }
         if (column == null) return;
-
         stringBuilderColumn.append(column.name().toLowerCase())
                 .append(" ")
                 .append(database.getDatabaseDataType(column.type()));
         if (column.notNull()){
             stringBuilderColumn.append(" NOT NULL ");
         }
-
         if (primaryKey!=null){
             stringBuilderColumn.append(" ").append("PRIMARY KEY");
             if (column.type() == ColumnType.INTEGER){
@@ -56,6 +67,11 @@ public class OrmInitializer {
         database.appendField(stringBuilderColumn.toString());
     }
 
+    /**
+     * based on the annotations create the database instance and determine the table
+     * @param annotations
+     * @return
+     */
     public static IDatabase getDatabase(Annotation[] annotations){
         IDatabase db = null;
         Database aDb = null;
@@ -70,9 +86,9 @@ public class OrmInitializer {
         }
         if (aDb == null || table == null) return null;
         switch (aDb.dbType()){
-            case DERBY  -> db = new DerbyDatabase(aDb.name());
-            case SQLITE -> db = new SQLiteIDatabase(aDb.name());
-            case H2     -> db = new H2Database(aDb.name());
+            case DERBY  -> db = new DerbyDatabase("Databases/"+aDb.name());
+            case SQLITE -> db = new SQLiteIDatabase("Databases/"+aDb.name());
+            case H2     -> db = new H2Database("Databases/"+aDb.name());
         }
         if (db == null) return db;
         db.setTable(table.name());

@@ -1,9 +1,11 @@
 package com.unipi.msc.ormproject.ORM.Tool;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import org.apache.commons.io.FileUtils;
+
+import java.io.*;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class LoadClasses {
@@ -25,4 +27,17 @@ public class LoadClasses {
         return null;
     }
 
+    public static void dropDatabases() {
+        // drop databases
+        Arrays.stream(Objects.requireNonNull(new File(System.getProperty("user.dir")+"/Databases/").listFiles())).forEach(file -> {
+            try {
+                if (!file.exists()) return;
+                if (file.isDirectory()) {
+                    FileUtils.deleteDirectory(file);
+                } else {
+                    file.delete();
+                }
+            } catch (IOException ignore) {}
+        });
+    }
 }

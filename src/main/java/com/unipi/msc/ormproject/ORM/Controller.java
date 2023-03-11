@@ -33,10 +33,26 @@ public class Controller {
         Field f = Arrays.stream(c.getDeclaredFields()).filter(field -> Arrays.stream(field.getAnnotations()).anyMatch(annotation -> annotation instanceof PrimaryKey)).findFirst().orElse(null);
         if (f == null) return null;
         if (((DBMethod) dbMethod).type() == Query.SELECT){
-            return database.selectQuery(c,f.getName().toLowerCase()+" = '"+am+"'");
+            return database.selectQuery(c,f.getName().toLowerCase()+" = '"+am+"' ");
         }else if (((DBMethod) dbMethod).type() == Query.DELETE){
-            return database.deleteQuery(c,f.getName().toLowerCase()+" = '"+am+"'");
+            return database.deleteQuery(c,f.getName().toLowerCase()+" = '"+am+"' ");
         }
         return null;
+    }
+
+    public static int runQuery(Object o) {
+        StackTraceElement stackTrace = Thread.currentThread().getStackTrace()[2];
+        IDatabase database = OrmInitializer.getDatabase(o.getClass().getAnnotations());
+        if (database == null) return -1;
+        Method m = Arrays.stream(o.getClass().getMethods()).filter(method -> method.getName().equals(stackTrace.getMethodName())).findFirst().orElse(null);
+        if (m == null) return -1;
+        Annotation dbMethod = Arrays.stream(m.getAnnotations()).filter(annotation -> annotation instanceof DBMethod).findFirst().orElse(null);
+        if (dbMethod == null) return -1;
+        Field f = Arrays.stream(o.getClass().getDeclaredFields()).filter(field -> Arrays.stream(field.getAnnotations()).anyMatch(annotation -> annotation instanceof PrimaryKey)).findFirst().orElse(null);
+        if (f == null) return -1;
+        if (((DBMethod) dbMethod).type() == Query.SAVE){
+            return database.save(o);
+        }
+        return -1;
     }
 }
