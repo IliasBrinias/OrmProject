@@ -15,7 +15,7 @@ public class StudentSQLite {
     private String AM;
     @Column(name="Email",type=ColumnType.TEXT, unique = true, notNull = true)
     private String email;
-    @Column(name="yearOfStudies",type=ColumnType.INTEGER)
+    @Column(type = ColumnType.INTEGER)
     private int yearOfStudies;
     @Column(name="FullName",type=ColumnType.TEXT)
     private String fullName;
@@ -32,9 +32,7 @@ public class StudentSQLite {
     @DBMethod(type= Query.SELECT_ALL)
     public List<StudentSQLite> getAllStudents(){return (List<StudentSQLite>) Controller.runQuery(StudentSQLite.class);}
     @DBMethod(type= Query.SELECT)
-    public StudentSQLite getStudent(String am){
-        return (StudentSQLite) Controller.runQuery(StudentSQLite.class,am);
-    }
+    public StudentSQLite getStudent(String am){return (StudentSQLite) Controller.runQuery(StudentSQLite.class,am);}
     @DBMethod(type=Query.DELETE)
     public int deleteStudents(String am){
         return (int) Controller.runQuery(StudentSQLite.class,am);

@@ -27,7 +27,7 @@ public class OrmInitializer {
             IDatabase database = getDatabase(c.getAnnotations());
             if (database == null || c.getDeclaredFields().length == 0) return;
             for (Field f: c.getDeclaredFields()){
-                addFields(database,f.getAnnotations());
+                addFields(database,f);
             }
             database.createTable();
         });
@@ -36,13 +36,13 @@ public class OrmInitializer {
     /**
      * add field definition for the table creation
      * @param database
-     * @param annotations
+     * @param f
      */
-    private static void addFields(IDatabase database, Annotation[] annotations) {
+    private static void addFields(IDatabase database, Field f) {
         StringBuilder stringBuilderColumn = new StringBuilder();
         Column column = null;
         PrimaryKey primaryKey = null;
-        for (Annotation a:annotations) {
+        for (Annotation a:f.getAnnotations()) {
             if (a instanceof Column){
                 column = (Column) a;
             }else if (a instanceof PrimaryKey){
@@ -50,8 +50,12 @@ public class OrmInitializer {
             }
         }
         if (column == null) return;
-        stringBuilderColumn.append(column.name().toLowerCase())
-                .append(" ")
+        if (column.name().equals("")){
+            stringBuilderColumn.append(f.getName());
+        }else {
+            stringBuilderColumn.append(column.name().toLowerCase());
+        }
+        stringBuilderColumn.append(" ")
                 .append(database.getDatabaseDataType(column.type()));
         if (column.notNull()){
             stringBuilderColumn.append(" NOT NULL ");
