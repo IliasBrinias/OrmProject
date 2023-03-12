@@ -4,8 +4,9 @@ import com.unipi.msc.ormproject.ORM.Enum.ColumnType;
 import com.unipi.msc.ormproject.ORM.Interface.IDatabase;
 import org.sqlite.SQLiteConfig;
 
-import java.sql.*;
-import java.util.ArrayList;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.List;
 
 public class SQLiteIDatabase extends Database implements IDatabase {
@@ -14,15 +15,13 @@ public class SQLiteIDatabase extends Database implements IDatabase {
         super("jdbc:sqlite:"+System.getProperty("user.dir")+"/", dbName+".sqlite");
     }
     private Connection getConnection() throws ClassNotFoundException {
-        Connection connection = null;
         try {
             SQLiteConfig config = new SQLiteConfig();
             config.enforceForeignKeys(true);
-            connection = DriverManager.getConnection(getDatabaseUrl()+getDbName(),config.toProperties());
+            return DriverManager.getConnection(getDatabaseUrl()+getDbName(),config.toProperties());
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return connection;
     }
     public int createTable(){
         StringBuilder stringBuilderCreate = new StringBuilder();
@@ -34,9 +33,8 @@ public class SQLiteIDatabase extends Database implements IDatabase {
         try {
             return runUpdateStatement(getConnection(),stringBuilderCreate.toString());
         } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return -1;
     }
     @Override
     public void appendField(String line) {
@@ -57,14 +55,12 @@ public class SQLiteIDatabase extends Database implements IDatabase {
     }
     @Override
     public List<Object> selectQuery(Class c) {
-        List<Object> classData = new ArrayList<>();
         String query = "SELECT * FROM "+table;
         try {
-            classData = getQueryResultToList(c,getConnection(),query);
+            return getQueryResultToList(c,getConnection(),query);
         } catch (SQLException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return classData;
     }
 
     @Override
@@ -78,7 +74,7 @@ public class SQLiteIDatabase extends Database implements IDatabase {
         try {
             o = getQueryResultToObject(c,getConnection(),stringBuilderQuery.toString());
         } catch (SQLException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
         return o;
     }
@@ -93,17 +89,15 @@ public class SQLiteIDatabase extends Database implements IDatabase {
         try {
             return runUpdateStatement(getConnection(),stringBuilderQuery.toString());
         } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return -1;
     }
     @Override
     public int save(Object o) {
         try{
             return runUpdateStatement(getConnection(),getInsertQuery(table,o));
         } catch (ClassNotFoundException | IllegalAccessException | SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return -1;
     }
 }

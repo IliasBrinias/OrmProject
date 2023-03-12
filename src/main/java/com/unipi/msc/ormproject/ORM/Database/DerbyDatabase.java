@@ -13,13 +13,11 @@ public class DerbyDatabase extends Database implements IDatabase {
         super("jdbc:derby:", dbName);
     }
     private Connection getConnection() throws ClassNotFoundException {
-        Connection connection = null;
         try {
-            connection = DriverManager.getConnection(getDatabaseUrl()+getDbName()+";create=true");
+            return DriverManager.getConnection(getDatabaseUrl()+getDbName()+";create=true");
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return connection;
     }
     @Override
     public int createTable() {
@@ -32,9 +30,8 @@ public class DerbyDatabase extends Database implements IDatabase {
         try {
             return runUpdateStatement(getConnection(),stringBuilderCreate.toString());
         } catch (ClassNotFoundException|SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return -1;
     }
     @Override
     public void appendField(String line) {
@@ -55,29 +52,25 @@ public class DerbyDatabase extends Database implements IDatabase {
     }
     @Override
     public List<Object> selectQuery(Class c) {
-        List<Object> classData = new ArrayList<>();
         String query = "SELECT * FROM "+table;
         try {
-            classData = getQueryResultToList(c,getConnection(),query);
+            return getQueryResultToList(c,getConnection(),query);
         } catch (SQLException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return classData;
     }
     @Override
     public Object selectQuery(Class c, String whereCause) {
-        Object o = null;
         StringBuilder stringBuilderQuery = new StringBuilder();
         stringBuilderQuery.append("SELECT * FROM ")
                 .append(table)
                 .append(" WHERE ")
                 .append(whereCause);
         try {
-            o = getQueryResultToObject(c,getConnection(),stringBuilderQuery.toString());
+            return getQueryResultToObject(c,getConnection(),stringBuilderQuery.toString());
         } catch (SQLException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return o;
     }
     @Override
     public int deleteQuery(Class c, String whereCause) {
@@ -89,18 +82,15 @@ public class DerbyDatabase extends Database implements IDatabase {
         try {
             return runUpdateStatement(getConnection(),stringBuilderQuery.toString());
         } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return -1;
     }
     @Override
     public int save(Object o) {
         try{
             return runUpdateStatement(getConnection(),getInsertQuery(table,o));
         } catch (ClassNotFoundException | IllegalAccessException | SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return -1;
-
     }
 }
